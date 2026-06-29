@@ -1,8 +1,6 @@
-"""doesn't test anything"""
-
-import pytest
+""" doesn't test anything """
 
 
 def test_nothing() -> None:
-    """doesn't test anything"""
-    pytest.skip("This is just a placeholder")
+    """ doesn't test anything """
+    print("lol")
