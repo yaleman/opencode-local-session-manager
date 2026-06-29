@@ -6,7 +6,7 @@ from pathlib import Path
 
 from flask import Flask, abort, g, redirect, render_template, request, url_for
 
-DB_PATH = Path("/Users/yaleman/.local/share/opencode/opencode.db")
+DB_PATH = Path("~/.local/share/opencode/opencode.db").expanduser()
 
 app = Flask(__name__)
 
@@ -50,13 +50,22 @@ def render_part(raw):
 
     if ptype == "text":
         text = data.get("text", "")
-        text = re.sub(r"<personal-data>.*?</personal-data>", "[redacted]", text, flags=re.DOTALL)
+        text = re.sub(
+            r"<personal-data>.*?</personal-data>", "[redacted]", text, flags=re.DOTALL
+        )
         return {"kind": "text", "text": text}
 
     if ptype == "tool":
         name = data.get("name", "tool")
-        input_text = json.dumps(data.get("input", {}), indent=2) if "input" in data else ""
-        return {"kind": "tool", "name": name, "input": input_text, "raw": json.dumps(data, indent=2)}
+        input_text = (
+            json.dumps(data.get("input", {}), indent=2) if "input" in data else ""
+        )
+        return {
+            "kind": "tool",
+            "name": name,
+            "input": input_text,
+            "raw": json.dumps(data, indent=2),
+        }
 
     if ptype == "step-start" or ptype == "step-finish":
         return {"kind": "step", "name": ptype, "raw": json.dumps(data, indent=2)}
@@ -123,8 +132,12 @@ def index():
     total_pages = max((total + per_page - 1) // per_page, 1)
 
     archived_counts = {
-        "active": db.execute("SELECT COUNT(*) FROM session WHERE time_archived IS NULL").fetchone()[0],
-        "archived": db.execute("SELECT COUNT(*) FROM session WHERE time_archived IS NOT NULL").fetchone()[0],
+        "active": db.execute(
+            "SELECT COUNT(*) FROM session WHERE time_archived IS NULL"
+        ).fetchone()[0],
+        "archived": db.execute(
+            "SELECT COUNT(*) FROM session WHERE time_archived IS NOT NULL"
+        ).fetchone()[0],
     }
 
     return render_template(
@@ -148,7 +161,6 @@ def unarchive_session(session_id):
     db.execute("UPDATE session SET time_archived = NULL WHERE id = ?", (session_id,))
     db.commit()
     return redirect(url_for("session_detail", session_id=session_id))
-
 
 
 @app.route("/session/<session_id>")
@@ -192,7 +204,9 @@ def session_detail(session_id):
         except Exception:
             pass
 
-        rendered_parts = [render_part(p["data"]) for p in parts_by_message.get(msg["id"], [])]
+        rendered_parts = [
+            render_part(p["data"]) for p in parts_by_message.get(msg["id"], [])
+        ]
         message_list.append(
             {
                 "id": msg["id"],
