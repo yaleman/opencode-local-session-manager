@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>OpenCode Sessions</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; background: #1a1a1a; color: #e0e0e0; }
+    header { background: #2d2d2d; padding: 1rem; border-bottom: 1px solid #444; position: sticky; top: 0; z-index: 10; }
+    header h1 { margin: 0 0 0.5rem 0; font-size: 1.2rem; color: #fff; }
+    header a { color: #6cb4ee; text-decoration: none; }
+    header a:hover { text-decoration: underline; }
+    .filters { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+    .filters input, .filters select { padding: 0.4rem; background: #3a3a3a; border: 1px solid #555; color: #e0e0e0; border-radius: 4px; }
+    .filters button { padding: 0.4rem 1rem; background: #4a90e2; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    .filters button:hover { background: #357abd; }
+    main { padding: 1rem; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 0.6rem; text-align: left; border-bottom: 1px solid #333; }
+    th { background: #2d2d2d; color: #aaa; font-weight: 500; font-size: 0.85rem; }
+    tr:hover { background: #252525; }
+    td a { color: #6cb4ee; text-decoration: none; }
+    td a:hover { text-decoration: underline; }
+    .title-cell { max-width: 400px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dir-cell { max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #888; font-size: 0.85rem; }
+    .time-cell { color: #888; font-size: 0.85rem; white-space: nowrap; }
+    .pagination { margin-top: 1rem; display: flex; gap: 0.5rem; align-items: center; }
+    .pagination a, .pagination span { padding: 0.4rem 0.8rem; background: #2d2d2d; border-radius: 4px; color: #e0e0e0; text-decoration: none; }
+    .pagination a:hover { background: #4a90e2; }
+    .pagination .current { background: #4a90e2; }
+    .stats { color: #888; font-size: 0.85rem; margin-bottom: 0.5rem; }
+    .archived-badge { font-size: 0.7rem; padding: 0.1rem 0.4rem; background: #c0392b; color: white; border-radius: 3px; margin-left: 0.4rem; text-transform: uppercase; }
+    .unarchive-btn { font-size: 0.7rem; padding: 0.1rem 0.4rem; background: #27ae60; color: white; border: none; border-radius: 3px; cursor: pointer; margin-left: 0.4rem; }
+    .unarchive-btn:hover { background: #219a52; }
+    .archived-toggle { display: flex; gap: 0.3rem; align-items: center; }
+    .archived-toggle a { padding: 0.3rem 0.7rem; background: #3a3a3a; border-radius: 4px; color: #aaa; text-decoration: none; font-size: 0.85rem; }
+    .archived-toggle a.active { background: #4a90e2; color: white; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1><a href="/">OpenCode Sessions</a></h1>
+    <form class="filters" method="get">
+      <input type="text" name="q" value="{{ search }}" placeholder="Search title..." size="30">
+      <select name="project">
+        <option value="">All projects</option>
+        {% for p in projects %}
+        <option value="{{ p.id }}" {% if project_filter == p.id %}selected{% endif %}>{{ p.display }}</option>
+        {% endfor %}
+      </select>
+      <div class="archived-toggle">
+        <a href="?q={{ search }}&project={{ project_filter }}&archived=active" class="{% if archived_filter == 'active' %}active{% endif %}">Active <small>{{ archived_counts.active }}</small></a>
+        <a href="?q={{ search }}&project={{ project_filter }}&archived=archived" class="{% if archived_filter == 'archived' %}active{% endif %}">Archived <small>{{ archived_counts.archived }}</small></a>
+        <a href="?q={{ search }}&project={{ project_filter }}&archived=all" class="{% if archived_filter == 'all' %}active{% endif %}">All</a>
+      </div>
+      <button type="submit">Filter</button>
+      {% if search or project_filter %}
+      <a href="/" style="color: #aaa; margin-left: 0.5rem;">Clear</a>
+      {% endif %}
+    </form>
+  </header>
+  <main>
+    <div class="stats">{{ total }} sessions — page {{ page }} of {{ total_pages }}</div>
+    <table>
+      <thead>
+        <tr>
+           <th>Title</th>
+           <th>Project</th>
+           <th>Directory</th>
+           <th>Updated</th>
+           <th>Cost</th>
+        </tr>
+      </thead>
+      <tbody>
+         {% for s in sessions %}
+         <tr>
+           <td class="title-cell">
+             <a href="/session/{{ s.id }}">{{ s.title or '(untitled)' }}</a>
+             {% if s.time_archived %}
+               <span class="archived-badge" title="Archived {{ s.time_archived | ts }}">Archived</span>
+               <form method="post" action="/session/{{ s.id }}/unarchive" style="display:inline;">
+                 <button type="submit" class="unarchive-btn">Unarchive</button>
+               </form>
+             {% endif %}
+           </td>
+           <td>{{ s.project_name or s.project_id[:12] }}</td>
+           <td class="dir-cell">{{ s.directory }}</td>
+           <td class="time-cell">{{ s.time_updated | ts }}</td>
+           <td>${{ "%.4f"|format(s.cost) }}</td>
+         </tr>
+         {% endfor %}
+      </tbody>
+    </table>
+    <div class="pagination">
+      {% if page > 1 %}
+      <a href="?page={{ page - 1 }}&q={{ search }}&project={{ project_filter }}&archived={{ archived_filter }}">← Prev</a>
+      {% endif %}
+      <span class="current">{{ page }}</span>
+      {% if page * per_page < total %}
+      <a href="?page={{ page + 1 }}&q={{ search }}&project={{ project_filter }}&archived={{ archived_filter }}">Next →</a>
+      {% endif %}
+    </div>
+  </main>
+</body>
+</html>

@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{ session.title or 'Session' }}</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; background: #1a1a1a; color: #e0e0e0; }
+    header { background: #2d2d2d; padding: 1rem; border-bottom: 1px solid #444; }
+    header h1 { margin: 0 0 0.5rem 0; font-size: 1.2rem; color: #fff; word-break: break-word; }
+    header a { color: #6cb4ee; text-decoration: none; }
+    header a:hover { text-decoration: underline; }
+    .meta { color: #888; font-size: 0.85rem; display: flex; flex-wrap: wrap; gap: 1rem; }
+    main { padding: 1rem; max-width: 900px; margin: 0 auto; }
+    .message { margin-bottom: 1.5rem; border-left: 3px solid #444; padding-left: 1rem; }
+    .message.user { border-color: #4a90e2; }
+    .message.assistant { border-color: #50c878; }
+    .message-header { font-size: 0.8rem; color: #888; margin-bottom: 0.3rem; display: flex; gap: 0.5rem; align-items: center; }
+    .role-badge { padding: 0.15rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.7rem; text-transform: uppercase; }
+    .role-badge.user { background: #4a90e2; color: white; }
+    .role-badge.assistant { background: #50c878; color: #1a1a1a; }
+    .role-badge.system { background: #9b59b6; color: white; }
+    .part { margin: 0.4rem 0; }
+    .part-text { white-space: pre-wrap; word-break: break-word; line-height: 1.5; }
+    .part-tool, .part-step, .part-file, .part-raw { background: #252525; padding: 0.6rem; border-radius: 4px; margin: 0.3rem 0; overflow-x: auto; border-left: 3px solid #555; }
+    .part-tool { border-color: #e67e22; }
+    .part-step { border-color: #f1c40f; }
+    .part-file { border-color: #1abc9c; }
+    .part-type-label { font-size: 0.7rem; color: #888; text-transform: uppercase; margin-bottom: 0.3rem; font-weight: 600; }
+    .unarchive-btn { padding: 0.3rem 0.8rem; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem; text-decoration: none; }
+    .unarchive-btn:hover { background: #219a52; }
+    pre { margin: 0; background: transparent; overflow-x: auto; font-size: 0.8rem; }
+    code { font-family: "SF Mono", Monaco, "Cascadia Code", monospace; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1><a href="/">←</a> {{ session.title or '(untitled)' }}</h1>
+    <div class="meta">
+      <span><strong>ID:</strong> {{ session.id }}</span>
+      <span><strong>Directory:</strong> {{ session.directory }}</span>
+      {% if session.project_name %}<span><strong>Project:</strong> {{ session.project_name }}</span>{% endif %}
+      <span><strong>Created:</strong> {{ session.created }}</span>
+      {% if session.archived_at %}
+        <span><strong>Archived:</strong> {{ session.archived_at }}</span>
+        <form method="post" action="/session/{{ session.id }}/unarchive" style="display:inline;">
+          <button type="submit" class="unarchive-btn">Unarchive</button>
+        </form>
+      {% endif %}
+      <span><strong>Cost:</strong> ${{ "%.4f"|format(session.cost) }}</span>
+      {% if session.tokens_input %}<span><strong>In:</strong> {{ "{:,.0f}".format(session.tokens_input) }} tok</span>{% endif %}
+      {% if session.tokens_output %}<span><strong>Out:</strong> {{ "{:,.0f}".format(session.tokens_output) }} tok</span>{% endif %}
+    </div>
+  </header>
+  <main>
+    {% for msg in messages %}
+    <div class="message {{ msg.role }}">
+      <div class="message-header">
+        <span class="role-badge {{ msg.role }}">{{ msg.role or 'unknown' }}</span>
+        <span>{{ msg.time }}</span>
+      </div>
+      {% for part in msg.parts %}
+        {% if part.kind == "text" %}
+        <div class="part part-text">{{ part.text }}</div>
+        {% elif part.kind == "tool" %}
+        <div class="part part-tool">
+          <div class="part-type-label">Tool: {{ part.name }}</div>
+          {% if part.input %}<pre><code>{{ part.input }}</code></pre>{% endif %}
+        </div>
+        {% elif part.kind == "step" %}
+        <div class="part part-step">
+          <div class="part-type-label">{{ part.name }}</div>
+        </div>
+        {% elif part.kind == "file" %}
+        <div class="part part-file">
+          <div class="part-type-label">{{ part.name }}</div>
+          <pre><code>{{ part.raw }}</code></pre>
+        </div>
+        {% else %}
+        <div class="part part-raw">
+          <pre><code>{{ part.text or part.raw }}</code></pre>
+        </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+    {% endfor %}
+  </main>
+</body>
+</html>
