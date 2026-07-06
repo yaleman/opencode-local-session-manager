@@ -5,7 +5,7 @@ A local web UI for browsing [OpenCode](https://github.com/opencode-ai/opencode) 
 ## Features
 
 - Paginated session list with search by title
-- Filter by project and archived/active status
+- Filter by project and archived/active/all status
 - Session detail view with full conversation (messages, tool calls, file patches)
 - Cost, token count, and timing metadata per session
 - Dark-themed UI
